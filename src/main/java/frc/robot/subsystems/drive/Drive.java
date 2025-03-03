@@ -1,10 +1,28 @@
+// Copyright 2021-2025 FRC 6328
+// http://github.com/Mechanical-Advantage
+//
+// This program is free software; you can redistribute it and/or
+// modify it under the terms of the GNU General Public License
+// version 3 as published by the Free Software Foundation or
+// available in the root directory of this project.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU General Public License for more details.
+
 package frc.robot.subsystems.drive;
 
 import static edu.wpi.first.units.Units.*;
 
+import com.ctre.phoenix6.CANBus;
 import com.pathplanner.lib.auto.AutoBuilder;
+import com.pathplanner.lib.config.ModuleConfig;
 import com.pathplanner.lib.config.PIDConstants;
+import com.pathplanner.lib.config.RobotConfig;
+import com.pathplanner.lib.controllers.PPHolonomicDriveController;
 import com.pathplanner.lib.pathfinding.Pathfinding;
+import com.pathplanner.lib.util.DriveFeedforwards;
 import com.pathplanner.lib.util.PathPlannerLogging;
 import edu.wpi.first.hal.FRCNetComm.tInstances;
 import edu.wpi.first.hal.FRCNetComm.tResourceType;
@@ -14,6 +32,7 @@ import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
+import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.math.geometry.Twist2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
@@ -21,38 +40,65 @@ import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N3;
+import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.wpilibj.Alert;
 import edu.wpi.first.wpilibj.Alert.AlertType;
 import edu.wpi.first.wpilibj.DriverStation;
-import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.Constants;
 import frc.robot.Constants.Mode;
-import frc.robot.subsystems.drive.gyro.GyroIO;
-import frc.robot.subsystems.drive.gyro.GyroIOInputsAutoLogged;
-import frc.robot.subsystems.drive.odometry_threads.PhoenixOdometryThread;
-import frc.robot.subsystems.drive.odometry_threads.SparkOdometryThread;
-import frc.robot.util.mechanical_advantage.LoggedTunableNumber;
-import frc.robot.util.mechanical_advantage.swerve.ModuleLimits;
-import frc.robot.util.mechanical_advantage.swerve.SwerveSetpoint;
-import frc.robot.util.mechanical_advantage.swerve.SwerveSetpointGenerator;
-import frc.robot.util.pathplanner.AdvancedPPHolonomicDriveController;
+import frc.robot.generated.TunerConstants;
 import frc.robot.util.pathplanner.LocalADStarAK;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Consumer;
+import org.ironmaple.simulation.SimulatedArena;
+import org.ironmaple.simulation.drivesims.COTS;
+import org.ironmaple.simulation.drivesims.SwerveDriveSimulation;
+import org.ironmaple.simulation.drivesims.configs.DriveTrainSimulationConfig;
 import org.littletonrobotics.junction.AutoLogOutput;
 import org.littletonrobotics.junction.Logger;
 
 public class Drive extends SubsystemBase {
-  public static final Lock odometryLock = new ReentrantLock();
+  // TunerConstants doesn't include these constants, so they are declared locally
+  static final double ODOMETRY_FREQUENCY =
+      new CANBus(TunerConstants.DrivetrainConstants.CANBusName).isNetworkFD() ? 250.0 : 100.0;
+  public static final double DRIVE_BASE_RADIUS =
+      Math.max(
+          Math.max(
+              Math.hypot(TunerConstants.FrontLeft.LocationX, TunerConstants.FrontLeft.LocationY),
+              Math.hypot(TunerConstants.FrontRight.LocationX, TunerConstants.FrontRight.LocationY)),
+          Math.max(
+              Math.hypot(TunerConstants.BackLeft.LocationX, TunerConstants.BackLeft.LocationY),
+              Math.hypot(TunerConstants.BackRight.LocationX, TunerConstants.BackRight.LocationY)));
+
+  // PathPlanner config constants
+  private static final double ROBOT_MASS_KG = 74.088;
+  private static final double ROBOT_MOI = 6.883;
+  private static final double WHEEL_COF = 1.2;
+  private static final RobotConfig PP_CONFIG =
+      new RobotConfig(
+          ROBOT_MASS_KG,
+          ROBOT_MOI,
+          new ModuleConfig(
+              TunerConstants.FrontLeft.WheelRadius,
+              TunerConstants.kSpeedAt12Volts.in(MetersPerSecond),
+              WHEEL_COF,
+              DCMotor.getKrakenX60Foc(1)
+                  .withReduction(TunerConstants.FrontLeft.DriveMotorGearRatio),
+              TunerConstants.FrontLeft.SlipCurrent,
+              1),
+          getModuleTranslations());
+
+  static final Lock odometryLock = new ReentrantLock();
   private final GyroIO gyroIO;
   private final GyroIOInputsAutoLogged gyroInputs = new GyroIOInputsAutoLogged();
   private final Module[] modules = new Module[4]; // FL, FR, BL, BR
   private final SysIdRoutine sysId;
   private final Alert gyroDisconnectedAlert =
-      new Alert("Drive", "Disconnected gyro, using kinematics as fallback.", AlertType.kError);
+      new Alert("Disconnected gyro, using kinematics as fallback.", AlertType.kError);
 
   private SwerveDriveKinematics kinematics = new SwerveDriveKinematics(getModuleTranslations());
   private Rotation2d rawGyroRotation = new Rotation2d();
@@ -66,63 +112,107 @@ public class Drive extends SubsystemBase {
   private SwerveDrivePoseEstimator poseEstimator =
       new SwerveDrivePoseEstimator(kinematics, rawGyroRotation, lastModulePositions, new Pose2d());
 
-  private final SwerveSetpointGenerator setpointGenerator;
-  private ModuleLimits currentModuleLimits = new ModuleLimits(10, 10, 10, 10);
-  private SwerveSetpoint currentSetpoint =
-      new SwerveSetpoint(
-          new ChassisSpeeds(),
-          new SwerveModuleState[] {
-            new SwerveModuleState(),
-            new SwerveModuleState(),
-            new SwerveModuleState(),
-            new SwerveModuleState()
-          },
-          new double[4]);
+  private final Consumer<Pose2d> resetSimulationPoseCallBack;
 
-  private final LoggedTunableNumber kMaxDriveVelocity;
-  private final LoggedTunableNumber kMaxDriveAcceleration;
-  private final LoggedTunableNumber kMaxDriveDeceleration;
-  private final LoggedTunableNumber kMaxSteeringVelocity;
+  public SwerveDriveSimulation driveSimulation;
+
+  public static Drive create() {
+    Drive drive;
+    switch (Constants.currentMode) {
+      case REAL:
+        drive =
+            new Drive(
+                new GyroIOPigeon2(),
+                // new GyroIO() {},
+                new ModuleIOTalonFX(TunerConstants.FrontLeft),
+                new ModuleIOTalonFX(TunerConstants.FrontRight),
+                new ModuleIOTalonFX(TunerConstants.BackLeft),
+                new ModuleIOTalonFX(TunerConstants.BackRight),
+                (pose) -> {});
+        // drive =
+        //         new Drive(
+        //                 new GyroIO() {},
+        //                 new ModuleIO() {},
+        //                 new ModuleIO() {},
+        //                 new ModuleIO() {},
+        //                 new ModuleIO() {},
+        //                 (pose) -> {});
+        break;
+
+      case SIM:
+        // Create and configure a drivetrain simulation configuration
+        final DriveTrainSimulationConfig driveTrainSimulationConfig =
+            DriveTrainSimulationConfig.Default()
+                // Specify gyro type (for realistic gyro drifting and error
+                // simulation)
+                .withGyro(COTS.ofPigeon2())
+                // Specify swerve module (for realistic swerve dynamics)
+                .withSwerveModule(
+                    COTS.ofMark4(
+                        DCMotor.getKrakenX60(1), // Drive motor is a Kraken X60
+                        DCMotor.getFalcon500(1), // Steer motor is a Falcon 500
+                        COTS.WHEELS.COLSONS.cof, // Use the COF for Colson Wheels
+                        3)) // L3 Gear ratio
+                // Configures the track length and track width (spacing between
+                // swerve modules)
+                .withTrackLengthTrackWidth(Inches.of(26), Inches.of(24))
+                // Configures the bumper size (dimensions of the robot bumper)
+                .withBumperSize(Inches.of(36), Inches.of(34));
+        SwerveDriveSimulation sim =
+            new SwerveDriveSimulation(
+                driveTrainSimulationConfig,
+                // Specify starting pose
+                new Pose2d(3, 3, new Rotation2d()));
+        // Register the drivetrain simulation to the default simulation world
+        SimulatedArena.getInstance().addDriveTrainSimulation(sim);
+        // Sim robot, instantiate physics sim IO implementations
+        drive =
+            new Drive(
+                new GyroIOSim(sim.getGyroSimulation()),
+                new ModuleIOSim(sim.getModules()[0]),
+                new ModuleIOSim(sim.getModules()[1]),
+                new ModuleIOSim(sim.getModules()[2]),
+                new ModuleIOSim(sim.getModules()[3]),
+                sim::setSimulationWorldPose);
+
+        drive.driveSimulation = sim;
+
+        break;
+
+      default:
+        // Replayed robot, disable IO implementations
+        drive =
+            new Drive(
+                new GyroIO() {},
+                new ModuleIO() {},
+                new ModuleIO() {},
+                new ModuleIO() {},
+                new ModuleIO() {},
+                (pose) -> {});
+    }
+
+    return drive;
+  }
 
   public Drive(
       GyroIO gyroIO,
-      Module flModule,
-      Module frModuleIO,
-      Module blModuleIO,
-      Module brModuleIO,
-      PhoenixOdometryThread phoenixOdometryThread,
-      SparkOdometryThread sparkOdometryThread) {
+      ModuleIO flModuleIO,
+      ModuleIO frModuleIO,
+      ModuleIO blModuleIO,
+      ModuleIO brModuleIO,
+      Consumer<Pose2d> resetSimulationPoseCallBack) {
     this.gyroIO = gyroIO;
-    modules[0] = flModule;
-    modules[1] = frModuleIO;
-    modules[2] = blModuleIO;
-    modules[3] = brModuleIO;
-
-    setpointGenerator =
-        new SwerveSetpointGenerator(
-            kinematics,
-            DriveConstants.moduleTranslations[0],
-            DriveConstants.moduleTranslations[1],
-            DriveConstants.moduleTranslations[2],
-            DriveConstants.moduleTranslations[3]);
-
-    kMaxDriveVelocity = new LoggedTunableNumber("Drive/ModuleLimits/kMaxDriveVelocity", 10);
-    kMaxDriveAcceleration = new LoggedTunableNumber("Drive/ModuleLimits/kMaxDriveAcceleration", 10);
-    kMaxDriveDeceleration = new LoggedTunableNumber("Drive/ModuleLimits/kMaxDriveDeceleration", 10);
-    kMaxSteeringVelocity = new LoggedTunableNumber("Drive/ModuleLimits/kMaxSteeringVelocity", 10);
+    modules[0] = new Module(flModuleIO, 0, TunerConstants.FrontLeft);
+    modules[1] = new Module(frModuleIO, 1, TunerConstants.FrontRight);
+    modules[2] = new Module(blModuleIO, 2, TunerConstants.BackLeft);
+    modules[3] = new Module(brModuleIO, 3, TunerConstants.BackRight);
+    this.resetSimulationPoseCallBack = resetSimulationPoseCallBack;
 
     // Usage reporting for swerve template
     HAL.report(tResourceType.kResourceType_RobotDrive, tInstances.kRobotDriveSwerve_AdvantageKit);
 
-    // Start phoenix odometry thread
-    if (phoenixOdometryThread != null) {
-      phoenixOdometryThread.start();
-    }
-
-    // Start spark odometry thread
-    if (sparkOdometryThread != null) {
-      sparkOdometryThread.start();
-    }
+    // Start odometry thread
+    PhoenixOdometryThread.getInstance().start();
 
     // Configure AutoBuilder for PathPlanner
     AutoBuilder.configure(
@@ -130,10 +220,11 @@ public class Drive extends SubsystemBase {
         this::setPose,
         this::getChassisSpeeds,
         this::runVelocity,
-        new AdvancedPPHolonomicDriveController(
+        new PPHolonomicDriveController(
             new PIDConstants(5.0, 0.0, 0.0), new PIDConstants(5.0, 0.0, 0.0)),
-        DriveConstants.ppConfig,
-        () -> DriverStation.getAlliance().orElse(Alliance.Blue) == Alliance.Red,
+        PP_CONFIG,
+        () -> false,
+        // () -> DriverStation.getAlliance().orElse(Alliance.Blue) == Alliance.Red,
         this);
     Pathfinding.setPathfinder(new LocalADStarAK());
     PathPlannerLogging.setLogActivePathCallback(
@@ -144,6 +235,8 @@ public class Drive extends SubsystemBase {
     PathPlannerLogging.setLogTargetPoseCallback(
         (targetPose) -> {
           Logger.recordOutput("Odometry/TrajectorySetpoint", targetPose);
+          double xyError = this.getPose().minus(targetPose).getTranslation().getNorm();
+          Logger.recordOutput("Odometry/TrajectoryError", xyError);
         });
 
     // Configure SysId
@@ -202,11 +295,7 @@ public class Drive extends SubsystemBase {
       // Update gyro angle
       if (gyroInputs.connected) {
         // Use the real gyro angle
-        try {
-          rawGyroRotation = gyroInputs.odometryYawPositions[i];
-        } catch (Exception e) {
-
-        }
+        rawGyroRotation = gyroInputs.odometryYawPositions[i];
       } else {
         // Use the angle delta from the kinematics and module deltas
         Twist2d twist = kinematics.toTwist2d(moduleDeltas);
@@ -219,16 +308,6 @@ public class Drive extends SubsystemBase {
 
     // Update gyro alert
     gyroDisconnectedAlert.set(!gyroInputs.connected && Constants.currentMode != Mode.SIM);
-
-    LoggedTunableNumber.ifChanged(
-        hashCode(),
-        (values) -> {
-          currentModuleLimits = new ModuleLimits(values[0], values[1], values[2], values[3]);
-        },
-        kMaxDriveVelocity,
-        kMaxDriveAcceleration,
-        kMaxDriveDeceleration,
-        kMaxSteeringVelocity);
   }
 
   /**
@@ -237,23 +316,41 @@ public class Drive extends SubsystemBase {
    * @param speeds Speeds in meters/sec
    */
   public void runVelocity(ChassisSpeeds speeds) {
-    currentSetpoint =
-        setpointGenerator.generateSetpoint(
-            currentModuleLimits, currentSetpoint, speeds, new Translation2d(), 0.02);
-    // Log unoptimized setpoints and setpoint speeds
-    Logger.recordOutput("SwerveStates/Setpoints", currentSetpoint.moduleStates());
-    Logger.recordOutput("SwerveChassisSpeeds/Setpoints", speeds);
+    // Calculate module setpoints
+    ChassisSpeeds discreteSpeeds = ChassisSpeeds.discretize(speeds, 0.02);
+    SwerveModuleState[] setpointStates = kinematics.toSwerveModuleStates(discreteSpeeds);
+    SwerveDriveKinematics.desaturateWheelSpeeds(setpointStates, TunerConstants.kSpeedAt12Volts);
 
-    Logger.recordOutput("SwerveStates/AzimuthVelocityFF", currentSetpoint.azimuthVelocityFF());
+    // Log unoptimized setpoints and setpoint speeds
+    Logger.recordOutput("SwerveStates/Setpoints", setpointStates);
+    Logger.recordOutput("SwerveChassisSpeeds/Setpoints", discreteSpeeds);
 
     // Send setpoints to modules
     for (int i = 0; i < 4; i++) {
-      modules[i].runSetpoint(
-          currentSetpoint.moduleStates()[i], currentSetpoint.azimuthVelocityFF()[i]);
+      modules[i].runSetpoint(setpointStates[i]);
     }
 
     // Log optimized setpoints (runSetpoint mutates each state)
-    Logger.recordOutput("SwerveStates/SetpointsOptimized", currentSetpoint.moduleStates());
+    Logger.recordOutput("SwerveStates/SetpointsOptimized", setpointStates);
+  }
+
+  public void runVelocityFF(ChassisSpeeds speeds, DriveFeedforwards accels) {
+    // Calculate module setpoints
+    ChassisSpeeds discreteSpeeds = ChassisSpeeds.discretize(speeds, 0.02);
+    SwerveModuleState[] setpointStates = kinematics.toSwerveModuleStates(discreteSpeeds);
+    SwerveDriveKinematics.desaturateWheelSpeeds(setpointStates, TunerConstants.kSpeedAt12Volts);
+
+    // Log unoptimized setpoints and setpoint speeds
+    Logger.recordOutput("SwerveStates/Setpoints", setpointStates);
+    Logger.recordOutput("SwerveChassisSpeeds/Setpoints", discreteSpeeds);
+
+    // Send setpoints to modules
+    for (int i = 0; i < 4; i++) {
+      modules[i].runSetpoint(setpointStates[i]);
+    }
+
+    // Log optimized setpoints (runSetpoint mutates each state)
+    Logger.recordOutput("SwerveStates/SetpointsOptimized", setpointStates);
   }
 
   /** Runs the drive in a straight line with the specified drive output. */
@@ -349,6 +446,7 @@ public class Drive extends SubsystemBase {
 
   /** Resets the current odometry pose. */
   public void setPose(Pose2d pose) {
+    resetSimulationPoseCallBack.accept(pose);
     poseEstimator.resetPosition(rawGyroRotation, getModulePositions(), pose);
   }
 
@@ -363,16 +461,26 @@ public class Drive extends SubsystemBase {
 
   /** Returns the maximum linear speed in meters per sec. */
   public double getMaxLinearSpeedMetersPerSec() {
-    return DriveConstants.maxSpeedAt12Volts.in(MetersPerSecond);
+    return TunerConstants.kSpeedAt12Volts.in(MetersPerSecond);
   }
 
   /** Returns the maximum angular speed in radians per sec. */
   public double getMaxAngularSpeedRadPerSec() {
-    return getMaxLinearSpeedMetersPerSec() / DriveConstants.driveBaseRadius;
+    return getMaxLinearSpeedMetersPerSec() / DRIVE_BASE_RADIUS;
   }
 
   /** Returns an array of module translations. */
   public static Translation2d[] getModuleTranslations() {
-    return DriveConstants.moduleTranslations;
+    return new Translation2d[] {
+      new Translation2d(TunerConstants.FrontLeft.LocationX, TunerConstants.FrontLeft.LocationY),
+      new Translation2d(TunerConstants.FrontRight.LocationX, TunerConstants.FrontRight.LocationY),
+      new Translation2d(TunerConstants.BackLeft.LocationX, TunerConstants.BackLeft.LocationY),
+      new Translation2d(TunerConstants.BackRight.LocationX, TunerConstants.BackRight.LocationY)
+    };
+  }
+
+  public Translation3d getAccelerometer() {
+
+    return new Translation3d(gyroInputs.accelX, gyroInputs.accelY, gyroInputs.accelZ);
   }
 }
