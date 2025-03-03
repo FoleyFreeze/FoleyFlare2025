@@ -89,7 +89,6 @@ public class FlywheelIOSim implements FlywheelIO {
     velocitySetpoint = velocity;
   }
 
-  @Override
   public void setGains(FlywheelGains gains) {
     controller.setPID(gains.kP(), gains.kI(), gains.kD());
     feedforward.setGains(gains.kS(), gains.kV(), gains.kA());

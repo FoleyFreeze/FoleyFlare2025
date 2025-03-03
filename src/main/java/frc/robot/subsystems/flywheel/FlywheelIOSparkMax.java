@@ -130,7 +130,6 @@ public class FlywheelIOSparkMax implements FlywheelIO {
     motors[0].setVoltage(voltage);
   }
 
-  @Override
   public void setGains(FlywheelGains gains) {
     motors[0].configure(
         leaderConfig.apply(new ClosedLoopConfig().pid(gains.kP(), gains.kI(), gains.kD())),

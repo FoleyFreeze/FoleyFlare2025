@@ -163,7 +163,6 @@ public class FlywheelIOTalonFX implements FlywheelIO {
     motors[0].setControl(voltageRequest.withOutput(voltage));
   }
 
-  @Override
   public void setGains(FlywheelGains gains) {
     motors[0]
         .getConfigurator()

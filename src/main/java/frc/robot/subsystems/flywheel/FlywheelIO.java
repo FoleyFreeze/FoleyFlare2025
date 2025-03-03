@@ -1,6 +1,6 @@
 package frc.robot.subsystems.flywheel;
 
-import frc.robot.subsystems.flywheel.FlywheelConstants.FlywheelGains;
+import frc.robot.subsystems.flywheel.FlywheelIOCals.FlywheelGains;
 import org.littletonrobotics.junction.AutoLog;
 
 public interface FlywheelIO {
