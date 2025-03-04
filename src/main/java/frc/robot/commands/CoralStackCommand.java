@@ -4,20 +4,21 @@
 
 package frc.robot.commands;
 
+import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.Constants.RollerConstants;
 import frc.robot.subsystems.RollerSubsystem;
-import edu.wpi.first.wpilibj2.command.Command;
 
-/** A CoralStackCommand that uses a roller subsystem.
- *  Used when coral is already in the L1 to get it past the first once.
+/**
+ * A CoralStackCommand that uses a roller subsystem. Used when coral is already in the L1 to get it
+ * past the first once.
  */
 public class CoralStackCommand extends Command {
   private final RollerSubsystem m_roller;
 
   /**
    * Use this command when there is already coral in L1.
-   * 
-   * May be less reliable if there is no coral already in L1.
+   *
+   * <p>May be less reliable if there is no coral already in L1.
    *
    * @param roller The subsystem used by this command.
    */
