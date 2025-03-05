@@ -6,18 +6,18 @@ package frc.robot.commands;
 
 import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.Constants.RollerConstants;
-import frc.robot.subsystems.RollerSubsystem;
+import frc.robot.subsystems.roller.Roller;
 
 /** A command to take Algae into the robot. */
 public class AlgieInCommand extends Command {
-  private final RollerSubsystem m_roller;
+  private final Roller m_roller;
 
   /**
    * Rolls Algae into the intake.
    *
    * @param roller The subsystem used by this command.
    */
-  public AlgieInCommand(RollerSubsystem roller) {
+  public AlgieInCommand(Roller roller) {
     m_roller = roller;
     // Use addRequirements() here to declare subsystem dependencies.
     addRequirements(roller);

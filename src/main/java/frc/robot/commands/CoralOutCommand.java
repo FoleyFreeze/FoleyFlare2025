@@ -6,18 +6,18 @@ package frc.robot.commands;
 
 import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.Constants.RollerConstants;
-import frc.robot.subsystems.RollerSubsystem;
+import frc.robot.subsystems.roller.Roller;
 
 /** A CoralOutCommand that uses a roller subsystem. */
 public class CoralOutCommand extends Command {
-  private final RollerSubsystem m_roller;
+  private final Roller m_roller;
 
   /**
    * Use to score coral into L1.
    *
    * @param roller The subsystem used by this command.
    */
-  public CoralOutCommand(RollerSubsystem roller) {
+  public CoralOutCommand(Roller roller) {
     m_roller = roller;
     addRequirements(roller);
   }

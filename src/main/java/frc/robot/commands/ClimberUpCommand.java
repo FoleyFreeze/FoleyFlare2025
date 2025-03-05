@@ -6,18 +6,18 @@ package frc.robot.commands;
 
 import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.Constants.ClimberConstants;
-import frc.robot.subsystems.ClimberSubsystem;
+import frc.robot.subsystems.climb.Climb;
 
 /** An ClimberUpCommand that uses a climb subsystem. */
 public class ClimberUpCommand extends Command {
-  private final ClimberSubsystem m_climber;
+  private final Climb m_climber;
 
   /**
    * Runs the climber up, note that this can change based on how the winch is wound.
    *
    * @param climber The subsystem used by this command.
    */
-  public ClimberUpCommand(ClimberSubsystem climber) {
+  public ClimberUpCommand(Climb climber) {
     m_climber = climber;
     addRequirements(climber);
   }

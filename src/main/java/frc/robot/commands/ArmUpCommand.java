@@ -6,11 +6,11 @@ package frc.robot.commands;
 
 import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.Constants.ArmConstants;
-import frc.robot.subsystems.ArmSubsystem;
+import frc.robot.subsystems.arm.Arm;
 
 /** An ArmUpCommand that uses an Arm subsystem. */
 public class ArmUpCommand extends Command {
-  private final ArmSubsystem m_arm;
+  private final Arm m_arm;
 
   /**
    * Powers the arm up, when finished passively holds the arm up.
@@ -20,7 +20,7 @@ public class ArmUpCommand extends Command {
    *
    * @param arm The subsystem used by this command.
    */
-  public ArmUpCommand(ArmSubsystem arm) {
+  public ArmUpCommand(Arm arm) {
     m_arm = arm;
     addRequirements(arm);
   }
