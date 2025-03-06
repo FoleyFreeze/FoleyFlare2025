@@ -22,6 +22,15 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
+import frc.robot.Constants.DriveConstants;
+import frc.robot.commands.AlgieInCommand;
+import frc.robot.commands.AlgieOutCommand;
+import frc.robot.commands.ArmDownCommand;
+import frc.robot.commands.ArmUpCommand;
+import frc.robot.commands.ClimberDownCommand;
+import frc.robot.commands.ClimberUpCommand;
+import frc.robot.commands.CoralOutCommand;
+import frc.robot.commands.CoralStackCommand;
 import frc.robot.commands.DriveCommands;
 import frc.robot.generated.TunerConstants;
 import frc.robot.subsystems.arm.Arm;
@@ -38,6 +47,10 @@ import frc.robot.subsystems.drive.GyroIOPigeon2;
 import frc.robot.subsystems.drive.ModuleIO;
 import frc.robot.subsystems.drive.ModuleIOSim;
 import frc.robot.subsystems.drive.ModuleIOTalonFX;
+import frc.robot.subsystems.roller.Roller;
+import frc.robot.subsystems.roller.RollerIO;
+import frc.robot.subsystems.roller.RollerIOHardware;
+import frc.robot.subsystems.roller.RollerIOSim;
 import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
 
 /**
@@ -51,9 +64,11 @@ public class RobotContainer {
   private final Drive drive;
   private final Climb climb;
   private final Arm arm;
+  private final Roller roller;
 
   // Controller
-  private final CommandXboxController controller = new CommandXboxController(0);
+  private final CommandXboxController driveJoystick = new CommandXboxController(0);
+  private final CommandXboxController operatorJoystick = new CommandXboxController(1);
 
   // Dashboard inputs
   private final LoggedDashboardChooser<Command> autoChooser;
@@ -72,6 +87,7 @@ public class RobotContainer {
                 new ModuleIOTalonFX(TunerConstants.BackRight));
         climb = new Climb(new ClimbIOHardware());
         arm = new Arm(new ArmIOHardware());
+        roller = new Roller(new RollerIOHardware());
 
         break;
 
@@ -86,6 +102,7 @@ public class RobotContainer {
                 new ModuleIOSim(TunerConstants.BackRight));
         climb = new Climb(new ClimbIOSim());
         arm = new Arm(new ArmIOSim());
+        roller = new Roller(new RollerIOSim());
 
         break;
 
@@ -101,6 +118,7 @@ public class RobotContainer {
 
         climb = new Climb(new ClimbIO() {});
         arm = new Arm(new ArmIO() {});
+        roller = new Roller(new RollerIO() {});
         break;
     }
 
@@ -124,7 +142,8 @@ public class RobotContainer {
         "Drive SysId (Dynamic Reverse)", drive.sysIdDynamic(SysIdRoutine.Direction.kReverse));
 
     // Configure the button bindings
-    configureButtonBindings();
+    configureSwerveBindings();
+    configureEverybotBindings();
   }
 
   /**
@@ -133,30 +152,48 @@ public class RobotContainer {
    * edu.wpi.first.wpilibj.Joystick} or {@link XboxController}), and then passing it to a {@link
    * edu.wpi.first.wpilibj2.command.button.JoystickButton}.
    */
-  private void configureButtonBindings() {
+  private void configureSwerveBindings() {
     // Default command, normal field-relative drive
     drive.setDefaultCommand(
         DriveCommands.joystickDrive(
             drive,
-            () -> -controller.getLeftY(),
-            () -> -controller.getLeftX(),
-            () -> -controller.getRightX()));
+            () -> -driveJoystick.getLeftY(),
+            () -> -driveJoystick.getLeftX(),
+            () -> -driveJoystick.getRightX()));
+
+    /**
+     * Holding the left bumper (or whatever button you assign) will multiply the speed by a decimal
+     * to limit the max speed of the robot -> 1 (100%) from the controller * .9 = 90% of the max
+     * speed when held (we also square it)
+     *
+     * <p>Slow mode is very valuable for line ups and the deep climb
+     *
+     * <p>When switching to single driver mode switch to the B button
+     */
+    driveJoystick
+        .leftBumper()
+        .whileTrue(
+            DriveCommands.joystickDrive(
+                drive,
+                () -> -driveJoystick.getLeftY() * DriveConstants.SLOW_MODE_MOVE,
+                () -> -driveJoystick.getLeftX() * DriveConstants.SLOW_MODE_MOVE,
+                () -> -driveJoystick.getRightX() * DriveConstants.SLOW_MODE_TURN));
 
     // Lock to 0° when A button is held
-    controller
+    driveJoystick
         .a()
         .whileTrue(
             DriveCommands.joystickDriveAtAngle(
                 drive,
-                () -> -controller.getLeftY(),
-                () -> -controller.getLeftX(),
+                () -> -driveJoystick.getLeftY(),
+                () -> -driveJoystick.getLeftX(),
                 () -> new Rotation2d()));
 
     // Switch to X pattern when X button is pressed
-    controller.x().onTrue(Commands.runOnce(drive::stopWithX, drive));
+    driveJoystick.x().onTrue(Commands.runOnce(drive::stopWithX, drive));
 
     // Reset gyro to 0° when B button is pressed
-    controller
+    driveJoystick
         .b()
         .onTrue(
             Commands.runOnce(
@@ -165,6 +202,39 @@ public class RobotContainer {
                             new Pose2d(drive.getPose().getTranslation(), new Rotation2d())),
                     drive)
                 .ignoringDisable(true));
+  }
+
+  private void configureEverybotBindings() {
+    /**
+     * Here we declare all of our operator commands, these commands could have been written in a
+     * more compact manner but are left verbose so the intent is clear.
+     */
+    operatorJoystick.rightBumper().whileTrue(new AlgieInCommand(roller));
+
+    // Here we use a trigger as a button when it is pushed past a certain threshold
+    operatorJoystick.rightTrigger(.2).whileTrue(new AlgieOutCommand(roller));
+
+    /**
+     * The arm will be passively held up or down after this is used, make sure not to run the arm
+     * too long or it may get upset!
+     */
+    operatorJoystick.leftBumper().whileTrue(new ArmUpCommand(arm));
+    operatorJoystick.leftTrigger(.2).whileTrue(new ArmDownCommand(arm));
+
+    /**
+     * Used to score coral, the stack command is for when there is already coral in L1 where you are
+     * trying to score. The numbers may need to be tuned, make sure the rollers do not wear on the
+     * plastic basket.
+     */
+    operatorJoystick.x().whileTrue(new CoralOutCommand(roller));
+    operatorJoystick.y().whileTrue(new CoralStackCommand(roller));
+
+    /**
+     * POV is a direction on the D-Pad or directional arrow pad of the controller, the direction of
+     * this will be different depending on how your winch is wound
+     */
+    operatorJoystick.pov(0).whileTrue(new ClimberUpCommand(climb));
+    operatorJoystick.pov(180).whileTrue(new ClimberDownCommand(climb));
   }
 
   /**
