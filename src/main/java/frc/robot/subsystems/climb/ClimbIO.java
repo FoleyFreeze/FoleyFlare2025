@@ -9,13 +9,13 @@ public interface ClimbIO {
     public boolean climbConnected = false;
     public double climbAppliedVolts = 0;
     public double climbCurrent = 0;
-    public double climbTempF = 0;
+    public double climbTempC = 0;
     public double climbPosition = 0;
   }
 
   public default void updateInputs(ClimbIOInputs inputs) {}
 
-  public default void setclimbVolts(double volts) {}
+  public default void set(double power) {}
 
   public default void zero() {}
 }

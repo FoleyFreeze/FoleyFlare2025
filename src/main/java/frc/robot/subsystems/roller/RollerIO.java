@@ -15,7 +15,7 @@ public interface RollerIO {
 
   public default void updateInputs(RollerIOInputs inputs) {}
 
-  public default void setRollerVolts(double volts) {}
+  public default void set(double power) {}
 
   public default void zero() {}
 }
