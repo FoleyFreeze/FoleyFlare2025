@@ -18,7 +18,7 @@ public class ArmIOHardware implements ArmIO {
 
   public ArmIOHardware() {
     motor = new SparkMax(ArmConstants.ARM_MOTOR_ID, MotorType.kBrushed);
-    motor.setCANTimeout(250);
+    // motor.setCANTimeout(250);
     encoder = motor.getEncoder();
     SparkMaxConfig armConfig = new SparkMaxConfig();
     armConfig.voltageCompensation(10);

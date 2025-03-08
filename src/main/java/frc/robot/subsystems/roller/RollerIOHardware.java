@@ -19,7 +19,7 @@ public class RollerIOHardware implements RollerIO {
 
   public RollerIOHardware() {
     motor = new SparkMax(RollerConstants.ROLLER_MOTOR_ID, MotorType.kBrushed);
-    motor.setCANTimeout(250);
+    // motor.setCANTimeout(250);
     encoder = motor.getEncoder();
 
     SparkMaxConfig rollerConfig = new SparkMaxConfig();
