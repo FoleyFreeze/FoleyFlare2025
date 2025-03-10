@@ -15,14 +15,15 @@ public class ClimbIOHardware implements ClimbIO {
   private final ClimbIOInputsAutoLogged inputs = new ClimbIOInputsAutoLogged();
 
   public ClimbIOHardware() {
-    motor.setCANTimeout(250);
     motor = new SparkMax(ClimberConstants.CLIMBER_MOTOR_ID, MotorType.kBrushed);
     encoder = motor.getEncoder();
 
+    // motor.setCANTimeout(250);
     SparkMaxConfig climbConfig = new SparkMaxConfig();
     climbConfig.voltageCompensation(ClimberConstants.CLIMBER_MOTOR_VOLTAGE_COMP);
     climbConfig.smartCurrentLimit(ClimberConstants.CLIMBER_MOTOR_CURRENT_LIMIT);
     climbConfig.idleMode(IdleMode.kBrake);
+    climbConfig.inverted(true);
     motor.configure(climbConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
   }
 
