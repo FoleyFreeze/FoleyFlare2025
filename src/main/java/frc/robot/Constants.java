@@ -36,6 +36,8 @@ public final class Constants {
   }
 
   public static final class DriveConstants {
+    public static final double GLOBAL_DRIVE_MULTIPLIER = 0.9;
+    public static final double GLOBAL_TURN_MULTIPLIER = 0.8;
     public static final double SLOW_MODE_MOVE = 0.5;
     public static final double SLOW_MODE_TURN = 0.6;
   }
@@ -56,8 +58,8 @@ public final class Constants {
     public static final double ARM_MOTOR_VOLTAGE_COMP = 10;
     public static final double ARM_SPEED_DOWN = 0.1;
     public static final double ARM_SPEED_UP = -0.1;
-    public static final double ARM_HOLD_DOWN = 0.0001;
-    public static final double ARM_HOLD_UP = -0.15;
+    public static final double ARM_HOLD_DOWN = 0.0;
+    public static final double ARM_HOLD_UP = -0.04;
   }
 
   public static final class ClimberConstants {
