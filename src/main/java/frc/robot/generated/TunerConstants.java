@@ -34,7 +34,7 @@ public class TunerConstants {
           .withKI(0)
           .withKD(0)
           .withKS(0.21)
-          .withKV(0.124 * 5.12)
+          .withKV(0.124 * 6.12 * 0.9) // the 0.3 is a modifier
           .withKA(0.05 * 6.12);
 
   // The closed-loop output type to use for the steer motors;

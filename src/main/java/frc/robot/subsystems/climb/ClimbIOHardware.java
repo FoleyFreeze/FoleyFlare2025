@@ -15,7 +15,7 @@ public class ClimbIOHardware implements ClimbIO {
   private final ClimbIOInputsAutoLogged inputs = new ClimbIOInputsAutoLogged();
 
   public ClimbIOHardware() {
-    motor = new SparkMax(ClimberConstants.CLIMBER_MOTOR_ID, MotorType.kBrushed);
+    motor = new SparkMax(ClimberConstants.CLIMBER_MOTOR_ID, MotorType.kBrushless);
     encoder = motor.getEncoder();
 
     // motor.setCANTimeout(250);

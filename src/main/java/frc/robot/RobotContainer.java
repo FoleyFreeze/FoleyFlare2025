@@ -218,8 +218,8 @@ public class RobotContainer {
      * The arm will be passively held up or down after this is used, make sure not to run the arm
      * too long or it may get upset!
      */
-    operatorJoystick.leftBumper().whileTrue(new ArmUpCommand(arm));
-    operatorJoystick.leftTrigger(.2).whileTrue(new ArmDownCommand(arm));
+    operatorJoystick.leftTrigger(.2).whileTrue(new ArmUpCommand(arm));
+    operatorJoystick.leftBumper().whileTrue(new ArmDownCommand(arm));
 
     /**
      * Used to score coral, the stack command is for when there is already coral in L1 where you are

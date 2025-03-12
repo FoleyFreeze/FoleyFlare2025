@@ -18,11 +18,12 @@ public class RollerIOHardware implements RollerIO {
   RollerCals k;
 
   public RollerIOHardware() {
-    motor = new SparkMax(RollerConstants.ROLLER_MOTOR_ID, MotorType.kBrushed);
+    motor = new SparkMax(RollerConstants.ROLLER_MOTOR_ID, MotorType.kBrushless);
     // motor.setCANTimeout(250);
     encoder = motor.getEncoder();
 
     SparkMaxConfig rollerConfig = new SparkMaxConfig();
+    rollerConfig.inverted(true);
     rollerConfig.voltageCompensation(RollerConstants.ROLLER_MOTOR_VOLTAGE_COMP);
     rollerConfig.smartCurrentLimit(RollerConstants.ROLLER_MOTOR_CURRENT_LIMIT);
     rollerConfig.idleMode(IdleMode.kBrake);

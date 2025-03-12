@@ -17,13 +17,13 @@ public class ArmIOHardware implements ArmIO {
   ArmCals k;
 
   public ArmIOHardware() {
-    motor = new SparkMax(ArmConstants.ARM_MOTOR_ID, MotorType.kBrushed);
+    motor = new SparkMax(ArmConstants.ARM_MOTOR_ID, MotorType.kBrushless);
     // motor.setCANTimeout(250);
     encoder = motor.getEncoder();
     SparkMaxConfig armConfig = new SparkMaxConfig();
     armConfig.voltageCompensation(10);
     armConfig.smartCurrentLimit(ArmConstants.ARM_MOTOR_CURRENT_LIMIT);
-    armConfig.idleMode(IdleMode.kBrake);
+    armConfig.idleMode(IdleMode.kCoast);
     SparkBase.ResetMode resetMode = SparkBase.ResetMode.kNoResetSafeParameters;
     motor.configureAsync(
         armConfig,
