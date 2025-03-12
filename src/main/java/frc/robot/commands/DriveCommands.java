@@ -28,6 +28,7 @@ import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
+import frc.robot.RobotContainer;
 import frc.robot.subsystems.drive.Drive;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
@@ -100,6 +101,22 @@ public class DriveCommands {
                       : drive.getRotation()));
         },
         drive);
+  }
+
+  public static Command joystickDrive(RobotContainer r){
+    return joystickDrive(
+      r.drive, 
+      () -> -r.driveJoystick.getLeftX(), 
+      () -> -r.driveJoystick.getLeftY(), 
+      () -> -r.driveJoystick.getRightX());
+  }
+
+  public static Command driveForward(RobotContainer r, double power){
+    return joystickDrive(
+      r.drive, 
+      () -> power, 
+      () -> 0, 
+      () -> 0);
   }
 
   /**

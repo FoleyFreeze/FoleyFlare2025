@@ -61,14 +61,14 @@ import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
  */
 public class RobotContainer {
   // Subsystems
-  private final Drive drive;
-  private final Climb climb;
-  private final Arm arm;
-  private final Roller roller;
+  public final Drive drive;
+  public final Climb climb;
+  public final Arm arm;
+  public final Roller roller;
 
   // Controller
-  private final CommandXboxController driveJoystick = new CommandXboxController(0);
-  private final CommandXboxController operatorJoystick = new CommandXboxController(1);
+  public final CommandXboxController driveJoystick = new CommandXboxController(0);
+  public final CommandXboxController operatorJoystick = new CommandXboxController(1);
 
   // Dashboard inputs
   private final LoggedDashboardChooser<Command> autoChooser;
