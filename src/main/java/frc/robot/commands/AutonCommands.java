@@ -41,9 +41,9 @@ public class AutonCommands {
         new CoralOutCommand(r.roller)
             .alongWith(
                 new InstantCommand(() -> r.arm.runArm(0.2))
-                    .raceWith(new WaitCommand(0.1))
+                    .raceWith(new WaitCommand(0.2))
                     .andThen(new RunCommand(() -> r.arm.runArm(0.1))))
-            .raceWith(new WaitCommand(0.5)));
+            .raceWith(new WaitCommand(0.6)));
     c.addCommands(new ArmUpCommand(r.arm).raceWith(new WaitCommand(0.5)));
 
     return c;
