@@ -44,7 +44,7 @@ public class AutonCommands {
                     .raceWith(new WaitCommand(0.1))
                     .andThen(new RunCommand(() -> r.arm.runArm(0.1))))
             .raceWith(new WaitCommand(0.5)));
-    c.addCommands(new ArmUpCommand(r.arm).raceWith(new WaitCommand(0.1)));
+    c.addCommands(new ArmUpCommand(r.arm).raceWith(new WaitCommand(0.5)));
 
     return c;
   }
