@@ -3,7 +3,6 @@ package frc.robot.commands;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj.DriverStation;
-import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.RunCommand;
@@ -54,6 +53,12 @@ public class AutonCommands {
   }
 
   public static boolean isBlue() {
-    return DriverStation.getAlliance().orElse(Alliance.Blue) == Alliance.Blue;
+    // return DriverStation.getAlliance().orElse(Alliance.Blue) == Alliance.Blue;
+    var alliance = DriverStation.getAlliance();
+    if (alliance.get() == DriverStation.Alliance.Blue) {
+      return true;
+    } else {
+      return false;
+    }
   }
 }
