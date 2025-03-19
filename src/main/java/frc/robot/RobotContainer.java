@@ -29,6 +29,7 @@ import frc.robot.commands.ArmDownCommand;
 import frc.robot.commands.ArmUpCommand;
 import frc.robot.commands.ClimberDownCommand;
 import frc.robot.commands.ClimberUpCommand;
+import frc.robot.commands.CoralAutoButton;
 import frc.robot.commands.CoralOutCommand;
 import frc.robot.commands.CoralStackCommand;
 import frc.robot.commands.DriveCommands;
@@ -72,6 +73,7 @@ public class RobotContainer {
 
   // Dashboard inputs
   private final LoggedDashboardChooser<Command> autoChooser;
+  public final CoralAutoButton m_CoralAutoButton = new CoralAutoButton();
 
   /** The container for the robot. Contains subsystems, OI devices, and commands. */
   public RobotContainer() {
@@ -213,6 +215,8 @@ public class RobotContainer {
 
     // Here we use a trigger as a button when it is pushed past a certain threshold
     operatorJoystick.rightTrigger(.2).whileTrue(new AlgieOutCommand(roller));
+
+    operatorJoystick.a().whileTrue(m_CoralAutoButton.CoralAutoButtonA(this));
 
     /**
      * The arm will be passively held up or down after this is used, make sure not to run the arm

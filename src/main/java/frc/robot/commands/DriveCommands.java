@@ -103,20 +103,16 @@ public class DriveCommands {
         drive);
   }
 
-  public static Command joystickDrive(RobotContainer r){
+  public static Command joystickDrive(RobotContainer r) {
     return joystickDrive(
-      r.drive, 
-      () -> -r.driveJoystick.getLeftX(), 
-      () -> -r.driveJoystick.getLeftY(), 
-      () -> -r.driveJoystick.getRightX());
+        r.drive,
+        () -> -r.driveJoystick.getLeftX(),
+        () -> -r.driveJoystick.getLeftY(),
+        () -> -r.driveJoystick.getRightX());
   }
 
-  public static Command driveForward(RobotContainer r, double power){
-    return joystickDrive(
-      r.drive, 
-      () -> power, 
-      () -> 0, 
-      () -> 0);
+  public static Command driveForward(RobotContainer r, double power) {
+    return joystickDrive(r.drive, () -> power, () -> 0, () -> 0);
   }
 
   /**
