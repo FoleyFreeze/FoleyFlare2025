@@ -1,7 +1,6 @@
 package frc.robot.subsystems.arm;
 
 import com.revrobotics.RelativeEncoder;
-import com.revrobotics.spark.SparkBase;
 import com.revrobotics.spark.SparkBase.PersistMode;
 import com.revrobotics.spark.SparkLowLevel.MotorType;
 import com.revrobotics.spark.SparkMax;
@@ -21,10 +20,10 @@ public class ArmIOHardware implements ArmIO {
     // motor.setCANTimeout(250);
     encoder = motor.getEncoder();
     SparkMaxConfig armConfig = new SparkMaxConfig();
+    armConfig.inverted(true);
     armConfig.voltageCompensation(10);
     armConfig.smartCurrentLimit(ArmConstants.ARM_MOTOR_CURRENT_LIMIT);
-    armConfig.idleMode(IdleMode.kCoast);
-    SparkBase.ResetMode resetMode = SparkBase.ResetMode.kNoResetSafeParameters;
+    armConfig.idleMode(IdleMode.kBrake);
     motor.configureAsync(
         armConfig,
         com.revrobotics.spark.SparkBase.ResetMode.kNoResetSafeParameters,

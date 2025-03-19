@@ -27,6 +27,7 @@ import frc.robot.commands.AlgieInCommand;
 import frc.robot.commands.AlgieOutCommand;
 import frc.robot.commands.ArmDownCommand;
 import frc.robot.commands.ArmUpCommand;
+import frc.robot.commands.AutonCommands;
 import frc.robot.commands.ClimberDownCommand;
 import frc.robot.commands.ClimberUpCommand;
 import frc.robot.commands.CoralAutoButton;
@@ -127,6 +128,11 @@ public class RobotContainer {
     // Set up auto routines
     autoChooser = new LoggedDashboardChooser<>("Auto Choices", AutoBuilder.buildAutoChooser());
 
+    // our autos
+    autoChooser.addDefaultOption("ScoreAutoCoral", AutonCommands.scoreAutoCoral(this));
+    autoChooser.addOption("JustDrive", AutonCommands.justDrive(this));
+    autoChooser.addOption("DoNothing", AutonCommands.doNothing(this));
+
     // Set up SysId routines
     autoChooser.addOption(
         "Drive Wheel Radius Characterization", DriveCommands.wheelRadiusCharacterization(drive));
@@ -222,8 +228,8 @@ public class RobotContainer {
      * The arm will be passively held up or down after this is used, make sure not to run the arm
      * too long or it may get upset!
      */
-    operatorJoystick.leftTrigger(.2).whileTrue(new ArmUpCommand(arm));
-    operatorJoystick.leftBumper().whileTrue(new ArmDownCommand(arm));
+    operatorJoystick.leftBumper().whileTrue(new ArmUpCommand(arm));
+    operatorJoystick.leftTrigger(.2).whileTrue(new ArmDownCommand(arm));
 
     /**
      * Used to score coral, the stack command is for when there is already coral in L1 where you are

@@ -28,6 +28,7 @@ import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
+import frc.robot.Constants.DriveConstants;
 import frc.robot.RobotContainer;
 import frc.robot.subsystems.drive.Drive;
 import java.text.DecimalFormat;
@@ -76,10 +77,14 @@ public class DriveCommands {
         () -> {
           // Get linear velocity
           Translation2d linearVelocity =
-              getLinearVelocityFromJoysticks(xSupplier.getAsDouble(), ySupplier.getAsDouble());
+              getLinearVelocityFromJoysticks(
+                  xSupplier.getAsDouble() * DriveConstants.GLOBAL_DRIVE_MULTIPLIER,
+                  ySupplier.getAsDouble() * DriveConstants.GLOBAL_DRIVE_MULTIPLIER);
 
           // Apply rotation deadband
-          double omega = MathUtil.applyDeadband(omegaSupplier.getAsDouble(), DEADBAND);
+          double omega =
+              MathUtil.applyDeadband(
+                  omegaSupplier.getAsDouble() * DriveConstants.GLOBAL_TURN_MULTIPLIER, DEADBAND);
 
           // Square rotation value for more precise control
           omega = Math.copySign(omega * omega, omega);
@@ -112,7 +117,15 @@ public class DriveCommands {
   }
 
   public static Command driveForward(RobotContainer r, double power) {
-    return joystickDrive(r.drive, () -> power, () -> 0, () -> 0);
+    return Commands.run(
+        () -> {
+          // Convert to field relative speeds & send command
+          ChassisSpeeds speeds =
+              new ChassisSpeeds(power * r.drive.getMaxLinearSpeedMetersPerSec(), 0, 0);
+
+          r.drive.runVelocity(speeds);
+        },
+        r.drive);
   }
 
   /**
