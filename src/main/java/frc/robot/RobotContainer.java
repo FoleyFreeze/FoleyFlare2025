@@ -1,34 +1,58 @@
+// Copyright 2021-2025 FRC 6328
+// http://github.com/Mechanical-Advantage
+//
+// This program is free software; you can redistribute it and/or
+// modify it under the terms of the GNU General Public License
+// version 3 as published by the Free Software Foundation or
+// available in the root directory of this project.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU General Public License for more details.
+
 package frc.robot;
 
 import com.pathplanner.lib.auto.AutoBuilder;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.GenericHID;
 import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
+import frc.robot.Constants.DriveConstants;
+import frc.robot.commands.AlgieInCommand;
+import frc.robot.commands.AlgieOutCommand;
+import frc.robot.commands.ArmDownCommand;
+import frc.robot.commands.ArmUpCommand;
+import frc.robot.commands.AutonCommands;
+import frc.robot.commands.ClimberDownCommand;
+import frc.robot.commands.ClimberUpCommand;
+import frc.robot.commands.CoralAutoButton;
+import frc.robot.commands.CoralOutCommand;
+import frc.robot.commands.CoralStackCommand;
 import frc.robot.commands.DriveCommands;
+import frc.robot.generated.TunerConstants;
+import frc.robot.subsystems.arm.Arm;
+import frc.robot.subsystems.arm.ArmIO;
+import frc.robot.subsystems.arm.ArmIOHardware;
+import frc.robot.subsystems.arm.ArmIOSim;
+import frc.robot.subsystems.climb.Climb;
+import frc.robot.subsystems.climb.ClimbIO;
+import frc.robot.subsystems.climb.ClimbIOHardware;
+import frc.robot.subsystems.climb.ClimbIOSim;
 import frc.robot.subsystems.drive.Drive;
-import frc.robot.subsystems.drive.Module;
-import frc.robot.subsystems.drive.azimuth_motor.AzimuthMotorConstants;
-import frc.robot.subsystems.drive.azimuth_motor.AzimuthMotorIOReplay;
-import frc.robot.subsystems.drive.azimuth_motor.AzimuthMotorIOSim;
-import frc.robot.subsystems.drive.azimuth_motor.AzimuthMotorIOTalonFX;
-import frc.robot.subsystems.drive.drive_motor.DriveMotorConstants;
-import frc.robot.subsystems.drive.drive_motor.DriveMotorIOReplay;
-import frc.robot.subsystems.drive.drive_motor.DriveMotorIOSim;
-import frc.robot.subsystems.drive.drive_motor.DriveMotorIOTalonFX;
-import frc.robot.subsystems.drive.gyro.GyroIO;
-import frc.robot.subsystems.drive.gyro.GyroIOPigeon2;
-import frc.robot.subsystems.drive.odometry_threads.PhoenixOdometryThread;
-import frc.robot.subsystems.vision.Vision;
-import frc.robot.subsystems.vision.VisionConstants;
-import frc.robot.subsystems.vision.VisionIO;
-import frc.robot.subsystems.vision.VisionIOPhotonVision;
-import frc.robot.subsystems.vision.VisionIOPhotonVisionSim;
+import frc.robot.subsystems.drive.GyroIO;
+import frc.robot.subsystems.drive.GyroIOPigeon2;
+import frc.robot.subsystems.drive.ModuleIO;
+import frc.robot.subsystems.drive.ModuleIOSim;
+import frc.robot.subsystems.drive.ModuleIOTalonFX;
+import frc.robot.subsystems.roller.Roller;
+import frc.robot.subsystems.roller.RollerIO;
+import frc.robot.subsystems.roller.RollerIOHardware;
+import frc.robot.subsystems.roller.RollerIOSim;
 import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
 
 /**
@@ -39,97 +63,50 @@ import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
  */
 public class RobotContainer {
   // Subsystems
-  private final Drive drive;
-
-  @SuppressWarnings("unused")
-  private final Vision vision;
+  public final Drive drive;
+  public final Climb climb;
+  public final Arm arm;
+  public final Roller roller;
 
   // Controller
-  private final CommandXboxController driverController = new CommandXboxController(0);
+  public final CommandXboxController driveJoystick = new CommandXboxController(0);
+  public final CommandXboxController operatorJoystick = new CommandXboxController(1);
 
   // Dashboard inputs
   private final LoggedDashboardChooser<Command> autoChooser;
+  public final CoralAutoButton m_CoralAutoButton = new CoralAutoButton();
 
   /** The container for the robot. Contains subsystems, OI devices, and commands. */
   public RobotContainer() {
     switch (Constants.currentMode) {
       case REAL:
         // Real robot, instantiate hardware IO implementations
-
-        // If using REV hardware, set up the Spark Odometry Thread, if using CTRE hardware, set up
-        // the Phoenix Odometry Thread, if using a combination of the two, set up both
         drive =
             new Drive(
-                new GyroIOPigeon2(0, "Drive"),
-                new Module(
-                    new DriveMotorIOTalonFX(
-                        "FrontLeftDrive", DriveMotorConstants.FRONT_LEFT_CONFIG),
-                    DriveMotorConstants.FRONT_LEFT_GAINS,
-                    new AzimuthMotorIOTalonFX(
-                        "FrontLeftAz", AzimuthMotorConstants.FRONT_LEFT_CONFIG),
-                    AzimuthMotorConstants.FRONT_LEFT_GAINS),
-                new Module(
-                    new DriveMotorIOTalonFX(
-                        "FrontRightDrive", DriveMotorConstants.FRONT_RIGHT_CONFIG),
-                    DriveMotorConstants.FRONT_RIGHT_GAINS,
-                    new AzimuthMotorIOTalonFX(
-                        "FrontRightAz", AzimuthMotorConstants.FRONT_RIGHT_CONFIG),
-                    AzimuthMotorConstants.FRONT_RIGHT_GAINS),
-                new Module(
-                    new DriveMotorIOTalonFX("BackLeftDrive", DriveMotorConstants.BACK_LEFT_CONFIG),
-                    DriveMotorConstants.BACK_LEFT_GAINS,
-                    new AzimuthMotorIOTalonFX("BackLeftAz", AzimuthMotorConstants.BACK_LEFT_CONFIG),
-                    AzimuthMotorConstants.BACK_LEFT_GAINS),
-                new Module(
-                    new DriveMotorIOTalonFX(
-                        "BackRightDrive", DriveMotorConstants.BACK_RIGHT_CONFIG),
-                    DriveMotorConstants.BACK_RIGHT_GAINS,
-                    new AzimuthMotorIOTalonFX(
-                        "BackRightAz", AzimuthMotorConstants.BACK_RIGHT_CONFIG),
-                    AzimuthMotorConstants.BACK_RIGHT_GAINS),
-                PhoenixOdometryThread.getInstance(),
-                null);
-        vision =
-            new Vision(
-                drive::addVisionMeasurement,
-                new VisionIOPhotonVision(
-                    VisionConstants.camera0Name, VisionConstants.robotToCamera0));
+                new GyroIOPigeon2(),
+                new ModuleIOTalonFX(TunerConstants.FrontLeft),
+                new ModuleIOTalonFX(TunerConstants.FrontRight),
+                new ModuleIOTalonFX(TunerConstants.BackLeft),
+                new ModuleIOTalonFX(TunerConstants.BackRight));
+        climb = new Climb(new ClimbIOHardware());
+        arm = new Arm(new ArmIOHardware());
+        roller = new Roller(new RollerIOHardware());
+
         break;
 
       case SIM:
+        // Sim robot, instantiate physics sim IO implementations
         drive =
             new Drive(
                 new GyroIO() {},
-                new Module(
-                    new DriveMotorIOSim("FrontLeftDrive", DriveMotorConstants.FRONT_LEFT_CONFIG),
-                    DriveMotorConstants.FRONT_LEFT_GAINS,
-                    new AzimuthMotorIOSim("FrontLeftAz", AzimuthMotorConstants.FRONT_LEFT_CONFIG),
-                    AzimuthMotorConstants.FRONT_LEFT_GAINS),
-                new Module(
-                    new DriveMotorIOSim("FrontRightDrive", DriveMotorConstants.FRONT_RIGHT_CONFIG),
-                    DriveMotorConstants.FRONT_RIGHT_GAINS,
-                    new AzimuthMotorIOSim("FrontRightAz", AzimuthMotorConstants.FRONT_RIGHT_CONFIG),
-                    AzimuthMotorConstants.FRONT_RIGHT_GAINS),
-                new Module(
-                    new DriveMotorIOSim("BackLeftDrive", DriveMotorConstants.BACK_LEFT_CONFIG),
-                    DriveMotorConstants.BACK_LEFT_GAINS,
-                    new AzimuthMotorIOSim("BackLeftAz", AzimuthMotorConstants.BACK_LEFT_CONFIG),
-                    AzimuthMotorConstants.BACK_LEFT_GAINS),
-                new Module(
-                    new DriveMotorIOSim("BackRightDrive", DriveMotorConstants.BACK_RIGHT_CONFIG),
-                    DriveMotorConstants.BACK_RIGHT_GAINS,
-                    new AzimuthMotorIOSim("BackRightAz", AzimuthMotorConstants.BACK_RIGHT_CONFIG),
-                    AzimuthMotorConstants.BACK_RIGHT_GAINS),
-                null,
-                null);
+                new ModuleIOSim(TunerConstants.FrontLeft),
+                new ModuleIOSim(TunerConstants.FrontRight),
+                new ModuleIOSim(TunerConstants.BackLeft),
+                new ModuleIOSim(TunerConstants.BackRight));
+        climb = new Climb(new ClimbIOSim());
+        arm = new Arm(new ArmIOSim());
+        roller = new Roller(new RollerIOSim());
 
-        vision =
-            new Vision(
-                drive::addVisionMeasurement,
-                new VisionIOPhotonVisionSim(
-                    VisionConstants.camera0Name, VisionConstants.robotToCamera0, drive::getPose),
-                new VisionIOPhotonVisionSim(
-                    VisionConstants.camera1Name, VisionConstants.robotToCamera1, drive::getPose));
         break;
 
       default:
@@ -137,34 +114,24 @@ public class RobotContainer {
         drive =
             new Drive(
                 new GyroIO() {},
-                new Module(
-                    new DriveMotorIOReplay("FrontLeftDrive"),
-                    DriveMotorConstants.FRONT_LEFT_GAINS,
-                    new AzimuthMotorIOReplay("FrontLeftAz"),
-                    AzimuthMotorConstants.FRONT_LEFT_GAINS),
-                new Module(
-                    new DriveMotorIOReplay("FrontRightDrive"),
-                    DriveMotorConstants.FRONT_RIGHT_GAINS,
-                    new AzimuthMotorIOReplay("FrontRightAz"),
-                    AzimuthMotorConstants.FRONT_RIGHT_GAINS),
-                new Module(
-                    new DriveMotorIOReplay("BackLeftDrive"),
-                    DriveMotorConstants.BACK_LEFT_GAINS,
-                    new AzimuthMotorIOReplay("BackLeftAz"),
-                    AzimuthMotorConstants.BACK_LEFT_GAINS),
-                new Module(
-                    new DriveMotorIOReplay("BackRightDrive"),
-                    DriveMotorConstants.BACK_RIGHT_GAINS,
-                    new AzimuthMotorIOReplay("BackRightAz"),
-                    AzimuthMotorConstants.BACK_RIGHT_GAINS),
-                null,
-                null);
-        vision = new Vision(drive::addVisionMeasurement, new VisionIO() {}, new VisionIO() {});
+                new ModuleIO() {},
+                new ModuleIO() {},
+                new ModuleIO() {},
+                new ModuleIO() {});
+
+        climb = new Climb(new ClimbIO() {});
+        arm = new Arm(new ArmIO() {});
+        roller = new Roller(new RollerIO() {});
         break;
     }
 
     // Set up auto routines
     autoChooser = new LoggedDashboardChooser<>("Auto Choices", AutoBuilder.buildAutoChooser());
+
+    // our autos
+    autoChooser.addDefaultOption("ScoreAutoCoral", AutonCommands.scoreAutoCoral(this));
+    autoChooser.addOption("JustDrive", AutonCommands.justDrive(this));
+    autoChooser.addOption("DoNothing", AutonCommands.doNothing(this));
 
     // Set up SysId routines
     autoChooser.addOption(
@@ -183,7 +150,8 @@ public class RobotContainer {
         "Drive SysId (Dynamic Reverse)", drive.sysIdDynamic(SysIdRoutine.Direction.kReverse));
 
     // Configure the button bindings
-    configureButtonBindings();
+    configureSwerveBindings();
+    configureEverybotBindings();
   }
 
   /**
@@ -192,42 +160,91 @@ public class RobotContainer {
    * edu.wpi.first.wpilibj.Joystick} or {@link XboxController}), and then passing it to a {@link
    * edu.wpi.first.wpilibj2.command.button.JoystickButton}.
    */
-  private void configureButtonBindings() {
+  private void configureSwerveBindings() {
     // Default command, normal field-relative drive
     drive.setDefaultCommand(
         DriveCommands.joystickDrive(
             drive,
-            () -> -driverController.getLeftY(),
-            () -> -driverController.getLeftX(),
-            () -> -driverController.getRightX()));
+            () -> -driveJoystick.getLeftY(),
+            () -> -driveJoystick.getLeftX(),
+            () -> -driveJoystick.getRightX()));
+
+    /**
+     * Holding the left bumper (or whatever button you assign) will multiply the speed by a decimal
+     * to limit the max speed of the robot -> 1 (100%) from the controller * .9 = 90% of the max
+     * speed when held (we also square it)
+     *
+     * <p>Slow mode is very valuable for line ups and the deep climb
+     *
+     * <p>When switching to single driver mode switch to the B button
+     */
+    driveJoystick
+        .leftBumper()
+        .whileTrue(
+            DriveCommands.joystickDrive(
+                drive,
+                () -> -driveJoystick.getLeftY() * DriveConstants.SLOW_MODE_MOVE,
+                () -> -driveJoystick.getLeftX() * DriveConstants.SLOW_MODE_MOVE,
+                () -> -driveJoystick.getRightX() * DriveConstants.SLOW_MODE_TURN));
 
     // Lock to 0° when A button is held
-    driverController
+    driveJoystick
         .a()
         .whileTrue(
             DriveCommands.joystickDriveAtAngle(
                 drive,
-                () -> -driverController.getLeftY(),
-                () -> -driverController.getLeftX(),
+                () -> -driveJoystick.getLeftY(),
+                () -> -driveJoystick.getLeftX(),
                 () -> new Rotation2d()));
 
     // Switch to X pattern when X button is pressed
-    driverController.x().onTrue(Commands.runOnce(drive::stopWithX, drive));
-
-    // // Reset gyro / odometry
-    final Runnable resetGyro =
-        () ->
-            drive.setPose(
-                new Pose2d(
-                    drive.getPose().getTranslation(),
-                    DriverStation.getAlliance().isPresent()
-                        ? (DriverStation.getAlliance().get() == DriverStation.Alliance.Red
-                            ? new Rotation2d(Math.PI)
-                            : new Rotation2d())
-                        : new Rotation2d())); // zero gyro
+    driveJoystick.x().onTrue(Commands.runOnce(drive::stopWithX, drive));
 
     // Reset gyro to 0° when B button is pressed
-    driverController.b().onTrue(Commands.runOnce(resetGyro, drive).ignoringDisable(true));
+    driveJoystick
+        .b()
+        .onTrue(
+            Commands.runOnce(
+                    () ->
+                        drive.setPose(
+                            new Pose2d(drive.getPose().getTranslation(), new Rotation2d())),
+                    drive)
+                .ignoringDisable(true));
+  }
+
+  private void configureEverybotBindings() {
+    /**
+     * Here we declare all of our operator commands, these commands could have been written in a
+     * more compact manner but are left verbose so the intent is clear.
+     */
+    operatorJoystick.rightBumper().whileTrue(new AlgieInCommand(roller));
+
+    // Here we use a trigger as a button when it is pushed past a certain threshold
+    operatorJoystick.rightTrigger(.2).whileTrue(new AlgieOutCommand(roller));
+
+    operatorJoystick.a().onTrue(m_CoralAutoButton.CoralAutoButtonA(this));
+
+    /**
+     * The arm will be passively held up or down after this is used, make sure not to run the arm
+     * too long or it may get upset!
+     */
+    operatorJoystick.leftBumper().whileTrue(new ArmUpCommand(arm));
+    operatorJoystick.leftTrigger(.2).whileTrue(new ArmDownCommand(arm));
+
+    /**
+     * Used to score coral, the stack command is for when there is already coral in L1 where you are
+     * trying to score. The numbers may need to be tuned, make sure the rollers do not wear on the
+     * plastic basket.
+     */
+    operatorJoystick.x().whileTrue(new CoralOutCommand(roller));
+    operatorJoystick.y().whileTrue(new CoralStackCommand(roller));
+
+    /**
+     * POV is a direction on the D-Pad or directional arrow pad of the controller, the direction of
+     * this will be different depending on how your winch is wound
+     */
+    operatorJoystick.pov(0).whileTrue(new ClimberUpCommand(climb));
+    operatorJoystick.pov(180).whileTrue(new ClimberDownCommand(climb));
   }
 
   /**
