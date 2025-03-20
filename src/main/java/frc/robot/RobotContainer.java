@@ -222,7 +222,7 @@ public class RobotContainer {
     // Here we use a trigger as a button when it is pushed past a certain threshold
     operatorJoystick.rightTrigger(.2).whileTrue(new AlgieOutCommand(roller));
 
-    operatorJoystick.a().whileTrue(m_CoralAutoButton.CoralAutoButtonA(this));
+    operatorJoystick.a().onTrue(m_CoralAutoButton.CoralAutoButtonA(this));
 
     /**
      * The arm will be passively held up or down after this is used, make sure not to run the arm
