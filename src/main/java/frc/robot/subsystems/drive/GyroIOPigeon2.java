@@ -24,6 +24,7 @@ import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.AngularVelocity;
 import frc.robot.generated.TunerConstants;
 import java.util.Queue;
+import org.littletonrobotics.junction.AutoLogOutput;
 
 /** IO implementation for Pigeon 2. */
 public class GyroIOPigeon2 implements GyroIO {
@@ -46,6 +47,7 @@ public class GyroIOPigeon2 implements GyroIO {
     yawPositionQueue = PhoenixOdometryThread.getInstance().registerSignal(pigeon.getYaw());
   }
 
+  @AutoLogOutput
   @Override
   public void updateInputs(GyroIOInputs inputs) {
     inputs.connected = BaseStatusSignal.refreshAll(yaw, yawVelocity).equals(StatusCode.OK);
