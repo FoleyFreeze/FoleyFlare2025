@@ -9,7 +9,7 @@ public class CoralAutoButton {
 
   public Command CoralAutoButtonA(RobotContainer r) {
     SequentialCommandGroup c = new SequentialCommandGroup();
-    c.addCommands(new CoralOutCommand(r.roller).raceWith(new WaitCommand(1)));
+    c.addCommands(new CoralOutCommand(r.roller).raceWith(new WaitCommand(0.15)));
     c.addCommands(new ArmDownCommand(r.arm).raceWith(new WaitCommand(0.5)));
     return c;
   }
