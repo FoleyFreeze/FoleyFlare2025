@@ -32,7 +32,7 @@ public class AutonCommands {
     c.addCommands(new InstantCommand(() -> r.arm.runArm(ArmConstants.ARM_HOLD_UP))); // hold arm up
     c.addCommands(
         DriveCommands.driveForward(r, 0.2)
-            .raceWith(new WaitCommand(2.6))
+            .raceWith(new WaitCommand(2.9))
             .finallyDo(() -> r.drive.stop()));
     c.addCommands(
         new CoralOutCommand(r.roller)
