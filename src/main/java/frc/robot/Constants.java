@@ -21,7 +21,7 @@ import edu.wpi.first.wpilibj.RobotBase;
  * (log replay from a file).
  */
 public final class Constants {
-  public static final Mode simMode = Mode.SIM;
+  public static final Mode simMode = Mode.REPLAY;
   public static final Mode currentMode = RobotBase.isReal() ? Mode.REAL : simMode;
 
   public static enum Mode {
@@ -36,7 +36,7 @@ public final class Constants {
   }
 
   public static final class DriveConstants {
-    public static final double GLOBAL_DRIVE_MULTIPLIER = 0.9;
+    public static final double GLOBAL_DRIVE_MULTIPLIER = 0.5;
     public static final double GLOBAL_TURN_MULTIPLIER = 0.6; // was 0.8 Mr C
     public static final double SLOW_MODE_MOVE = 0.5;
     public static final double SLOW_MODE_TURN = 0.6;
